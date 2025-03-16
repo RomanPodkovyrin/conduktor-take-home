@@ -20,6 +20,8 @@ public class ConduktorApplication {
         // Check if we should load data (could be done via command-line arg)
         if (args.length > 0 && "load-data".equals(args[0])) {
             logger.info("Loading data to Kafka...");
+            DataLoader dataLoader = context.getBean(DataLoader.class);
+            dataLoader.loadDataToKafka();
         }
     }
 
