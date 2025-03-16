@@ -1,0 +1,27 @@
+### Get 1 message from Kafka topic starting from offset 1
+GET http://localhost:8080/topic/people-topic/1?count=1
+Accept: application/json
+
+### Get 1 message from Kafka topic starting from offset 10
+GET http://localhost:8080/topic/people-topic/10?count=1
+Accept: application/json
+
+### Get messages from Kafka topic starting from offset 0 with count 5
+GET http://localhost:8080/topic/people-topic/0?count=5
+Accept: application/json
+
+### Get messages from Kafka topic starting from offset 20 with count 10
+GET http://localhost:8080/topic/people-topic/20?count=10
+Accept: application/json
+
+### Get messages from a non-existing Kafka topic
+GET http://localhost:8080/topic/non-existing-topic/0?count=1
+Accept: application/json
+
+### Get messages with offset out of bound
+GET http://localhost:8080/topic/people-topic/1000?count=1
+Accept: application/json
+
+### Get messages with count out of bound
+GET http://localhost:8080/topic/people-topic/0?count=1000
+Accept: application/json
