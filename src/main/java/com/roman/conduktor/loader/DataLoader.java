@@ -3,6 +3,7 @@ package com.roman.conduktor.loader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.roman.conduktor.model.DataRoot;
 import com.roman.conduktor.model.Person;
+import com.roman.conduktor.service.KafkaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,12 +21,14 @@ public class DataLoader {
     private static final Logger logger = LoggerFactory.getLogger(DataLoader.class);
 
     private final ObjectMapper objectMapper;
+    private final KafkaService kafkaService;
 
     @Value("${kafka.topic.name}")
     private String topicName;
 
     @Autowired
-    public DataLoader(ObjectMapper objectMapper) {
+    public DataLoader(ObjectMapper objectMapper, KafkaService kafkaService) {
+        this.kafkaService = kafkaService;
         this.objectMapper = objectMapper;
     }
 
@@ -36,6 +39,12 @@ public class DataLoader {
             List<Person> people = readPeopleFromJson();
 
             logger.info("Loaded {} people from JSON file", people.size());
+
+            for (Person person : people) {
+                kafkaService.sendMessage(topicName, person.getId(), person);
+                // TODO: set correct log level for those messages
+                logger.info("Sent person with ID: {} to Kafka", person.getId());
+            }
 
             logger.info("All data loaded successfully into Kafka topic: {}", topicName);
         } catch (Exception e) {
