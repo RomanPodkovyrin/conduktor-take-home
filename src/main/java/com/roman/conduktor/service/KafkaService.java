@@ -2,10 +2,20 @@ package com.roman.conduktor.service;
 
 
 import com.roman.conduktor.config.KafkaConfig;
+import com.roman.conduktor.model.Person;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 
 @Service
@@ -41,6 +51,7 @@ public class KafkaService {
         });
 
         try {
+            // Sleep to avoid kafka sticky partition assignment
             Thread.sleep(10);
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -49,6 +60,49 @@ public class KafkaService {
         kafkaProducer.flush();
         kafkaProducer.close();
         // Send the message to the Kafka topic
+    }
+
+    public List<Person> consumeMessages(String topicName, int offset, int numMessages) {
+        // TODO: test topic, exists
+        // Consume messages from the Kafka topic
+        try (KafkaConsumer kafkaConsumer = new KafkaConsumer(this.kafkaConfig.consumerConfigs())) {
+            // TODO: make it more programmatic
+            List<TopicPartition> partitions = Arrays.asList(
+                    new TopicPartition(topicName, 0),
+                    new TopicPartition(topicName, 1),
+                    new TopicPartition(topicName, 2)
+            );
+
+            // TODO: keep offset for each partition???
+            kafkaConsumer.assign(partitions);
+            partitions.forEach(partition -> kafkaConsumer.seek(partition, offset));
+            logger.info("Consuming messages from topic: %s" ,topicName);
+
+            Integer collectedRecords = 0;
+            List<Person> messages = new ArrayList<>();
+
+            // Use this instead ?https://learn.conduktor.io/kafka/java-consumer-seek-and-assign/
+            while (collectedRecords < numMessages) {
+                ConsumerRecords<String, Person> records = kafkaConsumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<String, Person> record : records) {
+                    System.out.printf("Received message: Key=%s, Value=%s, Partition=%d, Offset=%d%n",
+                            record.key(), record.value(), record.partition(), record.offset());
+                    messages.add(record.value());
+                    collectedRecords++;
+                    if (collectedRecords >= numMessages) {
+                        break;
+                    }
+                }
+            }
+
+            return messages;
+        } catch (Exception e) {
+            e.printStackTrace();
+
+        }
+
+
+        return null;
     }
 
 }
