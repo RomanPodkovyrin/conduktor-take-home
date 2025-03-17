@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -30,12 +31,11 @@ class KafkaConsumerControllerTest {
         String topicName = "people-topic";
         int offset = 10;
         int count = 1;
-        Person person = new Person();
-        person.setName("John Doe");
+        Person person = new Person("1", "John Doe");
 
         List<Person> persons = Collections.singletonList(person);
         // Setup your mock service
-        when(kafkaService.consumeMessages(topicName, offset, count)).thenReturn(persons);
+        when(kafkaService.consumeMessages(topicName, offset, count)).thenReturn(Optional.of(persons));
 
         ObjectMapper objectMapper = new ObjectMapper();
         String expectedJson = objectMapper.writeValueAsString(Collections.singletonList(person));

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/topic")
@@ -40,17 +41,17 @@ public class KafkaConsumerController {
         logger.info("getMessages: {}", topicName);
 
         // TODO: Set offset to defaultOffset if offset is not provided
-        List<Person> messages = this.kafkaService.consumeMessages(topicName, offset, count);
+        Optional<List<Person>> messages = this.kafkaService.consumeMessages(topicName, offset, count);
 
         logger.info("Received request to get {} messages from topic {} at offset {}",
                 count, topicName, offset);
 
-        if (messages == null) {
+        if (messages.isEmpty()) {
             return ResponseEntity.status(404).build();
         }
         //TODO: Use optional to handle null messages
 
-        return messages.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(messages);
+        return messages.get().isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(messages.get());
     }
 
     // TODO: add endpoint for Get /topic/{topicName}?count=n as it says to have default for offset

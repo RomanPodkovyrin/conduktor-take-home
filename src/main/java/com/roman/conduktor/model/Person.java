@@ -1,10 +1,12 @@
 package com.roman.conduktor.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
+@NoArgsConstructor
 public class Person {
 
     @JsonProperty("_id")
@@ -22,6 +24,11 @@ public class Person {
     private Boolean verified;
     private Integer salary;
 
+    //TODO: Could have used @RequiredArgsConstructor
+    public Person(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
     @Data
     public static class Address {
         private String street;

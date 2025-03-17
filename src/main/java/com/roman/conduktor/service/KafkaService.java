@@ -103,11 +103,11 @@ public class KafkaService {
         // Send the message to the Kafka topic
     }
 
-    public List<Person> consumeMessages(String topicName, int offset, int numMessages) {
+    public Optional<List<Person>> consumeMessages(String topicName, int offset, int numMessages) {
         logger.info("Trying to consume messages from topic: {}", topicName);
         if (!topicExists( topicName)) {
             logger.error("Topic {} does not exist", topicName);
-            return null;
+            return Optional.empty();
         }
 
         // Consume messages from the Kafka topic
@@ -155,14 +155,14 @@ public class KafkaService {
                 }
             }
 
-            return messages;
+            return Optional.of(messages);
         } catch (Exception e) {
             e.printStackTrace();
 
         }
 
 
-        return null;
+        return Optional.empty();
     }
 
 }
