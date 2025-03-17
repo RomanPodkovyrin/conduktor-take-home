@@ -3,6 +3,8 @@ package com.roman.conduktor.service;
 
 import com.roman.conduktor.config.KafkaConfig;
 import com.roman.conduktor.model.Person;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -13,9 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 
 @Service
@@ -26,7 +27,48 @@ public class KafkaService {
     @Autowired
     public KafkaService(KafkaConfig kafkaConfig) {
         this.kafkaConfig = kafkaConfig;
-        this.kafkaConfig.setupTopic();
+//        setupTopic();
+    }
+
+    public void setupTopic() {
+        logger.info("property topicName: {}, partitions: {}, replicationFactor: {}", this.kafkaConfig.getTopicName(), this.kafkaConfig.getPartitions(), this.kafkaConfig.getReplicationFactor());
+        if (topicExists(this.kafkaConfig.adminClient(), this.kafkaConfig.getTopicName())) {
+            logger.info("Topic {} already exists", this.kafkaConfig.getTopicName());
+            logger.info("Deleting topic {}", this.kafkaConfig.getTopicName());
+            this.kafkaConfig.adminClient().deleteTopics(Collections.singleton(this.kafkaConfig.getTopicName()));
+            // Other approach to delete topic
+            // would be to consume all messages from the topic
+            try {
+                // Wait for the topic to be deleted
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        logger.info("Creating topic {}", this.kafkaConfig.getTopicName());
+        try {
+            createTopic(this.kafkaConfig.adminClient(), this.kafkaConfig.getTopicName(), this.kafkaConfig.getPartitions(), this.kafkaConfig.getReplicationFactor());
+        } catch (Exception e) {
+            logger.error("Error creating topic", e);
+        }
+    }
+
+    private static boolean topicExists(AdminClient adminClient, String topicName) {
+        try {
+            Set<String> topics = adminClient.listTopics().names().get();
+            return topics.contains(topicName);
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error checking if topic exists", e);
+        }
+    }
+
+    private static void createTopic(AdminClient adminClient, String topicName, int partitions, short replicationFactor) {
+        NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
+        try {
+            adminClient.createTopics(Collections.singleton(newTopic)).all().get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error creating topic: " + topicName, e);
+        }
     }
 
     public void sendMessage(String topicName, String key, Object value) {

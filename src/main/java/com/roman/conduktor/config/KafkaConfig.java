@@ -45,27 +45,6 @@ public class KafkaConfig {
         return AdminClient.create(props);
     }
 
-    @Bean
-    public AdminClient setupTopic() {
-
-        if (topicExists(this.adminClient(), topicName)){
-            logger.info("Topic {} already exists", topicName);
-            logger.info("Deleting topic {}", topicName);
-            this.adminClient().deleteTopics(Collections.singleton(topicName));
-            // Other approach to delete topic
-            // would be to consume all messages from the topic
-            try {
-                // Wait for the topic to be deleted
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        logger.info("Creating topic {}", topicName);
-        createTopic(this.adminClient(), topicName, partitions, replicationFactor);
-        return this.adminClient();
-    }
-
 
     @Bean
     public Properties producerConfigs() {
@@ -90,21 +69,5 @@ public class KafkaConfig {
     }
 
 
-    private static boolean topicExists(AdminClient adminClient, String topicName) {
-        try {
-            Set<String> topics = adminClient.listTopics().names().get();
-            return topics.contains(topicName);
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error checking if topic exists", e);
-        }
-    }
 
-    private static void createTopic(AdminClient adminClient, String topicName, int partitions, short replicationFactor) {
-        NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
-        try {
-            adminClient.createTopics(Collections.singleton(newTopic)).all().get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error creating topic: " + topicName, e);
-        }
-    }
 }

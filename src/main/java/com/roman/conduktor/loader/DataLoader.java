@@ -34,6 +34,7 @@ public class DataLoader {
 
     public void loadDataToKafka() {
         // prepare kafka topic
+        this.kafkaService.setupTopic();
 
         try {
             List<Person> people = readPeopleFromJson();
