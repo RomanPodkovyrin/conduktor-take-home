@@ -45,6 +45,11 @@ public class KafkaConsumerController {
         logger.info("Received request to get {} messages from topic {} at offset {}",
                 count, topicName, offset);
 
+        if (messages == null) {
+            return ResponseEntity.status(404).build();
+        }
+        //TODO: Use optional to handle null messages
+
         return messages.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(messages);
     }
 

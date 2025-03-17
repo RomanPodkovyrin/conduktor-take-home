@@ -3,7 +3,6 @@ package com.roman.conduktor.service;
 
 import com.roman.conduktor.config.KafkaConfig;
 import com.roman.conduktor.model.Person;
-import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -32,7 +31,7 @@ public class KafkaService {
 
     public void setupTopic() {
         logger.info("property topicName: {}, partitions: {}, replicationFactor: {}", this.kafkaConfig.getTopicName(), this.kafkaConfig.getPartitions(), this.kafkaConfig.getReplicationFactor());
-        if (topicExists(this.kafkaConfig.adminClient(), this.kafkaConfig.getTopicName())) {
+        if (topicExists(this.kafkaConfig.getTopicName())) {
             logger.info("Topic {} already exists", this.kafkaConfig.getTopicName());
             logger.info("Deleting topic {}", this.kafkaConfig.getTopicName());
             this.kafkaConfig.adminClient().deleteTopics(Collections.singleton(this.kafkaConfig.getTopicName()));
@@ -47,25 +46,25 @@ public class KafkaService {
         }
         logger.info("Creating topic {}", this.kafkaConfig.getTopicName());
         try {
-            createTopic(this.kafkaConfig.adminClient(), this.kafkaConfig.getTopicName(), this.kafkaConfig.getPartitions(), this.kafkaConfig.getReplicationFactor());
+            createTopic(this.kafkaConfig.getTopicName(), this.kafkaConfig.getPartitions(), this.kafkaConfig.getReplicationFactor());
         } catch (Exception e) {
             logger.error("Error creating topic", e);
         }
     }
 
-    private static boolean topicExists(AdminClient adminClient, String topicName) {
+    private boolean topicExists(String topicName) {
         try {
-            Set<String> topics = adminClient.listTopics().names().get();
+            Set<String> topics = this.kafkaConfig.adminClient().listTopics().names().get();
             return topics.contains(topicName);
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Error checking if topic exists", e);
         }
     }
 
-    private static void createTopic(AdminClient adminClient, String topicName, int partitions, short replicationFactor) {
+    private void createTopic( String topicName, int partitions, short replicationFactor) {
         NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
         try {
-            adminClient.createTopics(Collections.singleton(newTopic)).all().get();
+            this.kafkaConfig.adminClient().createTopics(Collections.singleton(newTopic)).all().get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Error creating topic: " + topicName, e);
         }
@@ -94,7 +93,7 @@ public class KafkaService {
 
         try {
             // Sleep to avoid kafka sticky partition assignment
-            Thread.sleep(10);
+            Thread.sleep(1);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -105,19 +104,34 @@ public class KafkaService {
     }
 
     public List<Person> consumeMessages(String topicName, int offset, int numMessages) {
-        // TODO: test topic, exists
+        logger.info("Trying to consume messages from topic: {}", topicName);
+        if (!topicExists( topicName)) {
+            logger.error("Topic {} does not exist", topicName);
+            return null;
+        }
+
         // Consume messages from the Kafka topic
         try (KafkaConsumer kafkaConsumer = new KafkaConsumer(this.kafkaConfig.consumerConfigs())) {
-            // TODO: make it more programmatic
-            List<TopicPartition> partitions = Arrays.asList(
-                    new TopicPartition(topicName, 0),
-                    new TopicPartition(topicName, 1),
-                    new TopicPartition(topicName, 2)
-            );
 
-            // TODO: keep offset for each partition???
+            // Get all partitions
+            List<TopicPartition> partitions = new ArrayList<>();
+            for (int i = 0; i < this.kafkaConfig.getPartitions(); i++) {
+                partitions.add(new TopicPartition(topicName, i));
+            }
+
             kafkaConsumer.assign(partitions);
-            partitions.forEach(partition -> kafkaConsumer.seek(partition, offset));
+//            partitions.forEach(partition -> kafkaConsumer.seek(partition, offset));
+
+            Map<TopicPartition, Long> endOffsets = kafkaConsumer.endOffsets(partitions);
+            for (TopicPartition partition : partitions) {
+                logger.info("Seeking partition {} offset {}", partition, endOffsets.get(partition));
+                if (offset >= endOffsets.get(partition)) {
+                    logger.error("Offset {} is out of bounds for partition {}, max partition is {}", offset, partition.partition(), endOffsets.get(partition));
+                    kafkaConsumer.seek(partition, endOffsets.get(partition));
+                } else {
+                    kafkaConsumer.seek(partition, offset);
+                }
+            }
             logger.info("Consuming messages from topic: %s" ,topicName);
 
             Integer collectedRecords = 0;
@@ -126,6 +140,10 @@ public class KafkaService {
             // Use this instead ?https://learn.conduktor.io/kafka/java-consumer-seek-and-assign/
             while (collectedRecords < numMessages) {
                 ConsumerRecords<String, Person> records = kafkaConsumer.poll(Duration.ofMillis(100));
+                if (records.isEmpty()) {
+                    logger.error("Number of records requested {} is out of bounds", numMessages);
+                    break;
+                }
                 for (ConsumerRecord<String, Person> record : records) {
                     System.out.printf("Received message: Key=%s, Value=%s, Partition=%d, Offset=%d%n",
                             record.key(), record.value(), record.partition(), record.offset());

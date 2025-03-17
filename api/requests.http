@@ -22,6 +22,14 @@ Accept: application/json
 GET http://localhost:8080/topic/people-topic/1000?count=1
 Accept: application/json
 
+### Get messages with offset out of bound for some partitions
+GET http://localhost:8080/topic/people-topic/170?count=10
+Accept: application/json
+
 ### Get messages with count out of bound
 GET http://localhost:8080/topic/people-topic/0?count=1000
+Accept: application/json
+
+### Get empty count
+GET http://localhost:8080/topic/people-topic/0?count=0
 Accept: application/json
