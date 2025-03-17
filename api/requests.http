@@ -33,3 +33,31 @@ Accept: application/json
 ### Get empty count
 GET http://localhost:8080/topic/people-topic/0?count=0
 Accept: application/json
+
+### Get 1 message from Kafka topic starting from default offset
+GET http://localhost:8080/topic/people-topic?count=1
+Accept: application/json
+
+### Get 1 message from Kafka topic starting from default offset
+GET http://localhost:8080/topic/people-topic?count=1
+Accept: application/json
+
+### Get messages from Kafka topic starting from default offset with count 5
+GET http://localhost:8080/topic/people-topic?count=5
+Accept: application/json
+
+### Get messages from Kafka topic starting from default offset with count 10
+GET http://localhost:8080/topic/people-topic?count=10
+Accept: application/json
+
+### Get messages from a non-existing Kafka topic starting from default offset
+GET http://localhost:8080/topic/non-existing-topic?count=1
+Accept: application/json
+
+### Get messages with count out of bound starting from default offset
+GET http://localhost:8080/topic/people-topic?count=1000
+Accept: application/json
+
+### Get empty count starting from default offset
+GET http://localhost:8080/topic/people-topic?count=0
+Accept: application/json

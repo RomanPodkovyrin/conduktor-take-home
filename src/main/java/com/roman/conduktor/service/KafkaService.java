@@ -3,6 +3,8 @@ package com.roman.conduktor.service;
 
 import com.roman.conduktor.config.KafkaConfig;
 import com.roman.conduktor.model.Person;
+import jakarta.annotation.PreDestroy;
+import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -22,11 +24,25 @@ import java.util.concurrent.ExecutionException;
 public class KafkaService {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(KafkaService.class);
     private final KafkaConfig kafkaConfig;
+    private final AdminClient adminClient;
+    private final KafkaProducer<String, Person> kafkaProducer;
+    private final KafkaConsumer<String, Person> kafkaConsumer;
 
     @Autowired
-    public KafkaService(KafkaConfig kafkaConfig) {
+    public KafkaService(KafkaConfig kafkaConfig, AdminClient adminClient) {
+        this.adminClient = adminClient;
         this.kafkaConfig = kafkaConfig;
-//        setupTopic();
+        this.kafkaProducer = new KafkaProducer<>(this.kafkaConfig.producerConfigs());
+        this.kafkaConsumer = new KafkaConsumer<>(this.kafkaConfig.consumerConfigs());
+        logger.info("KafkaService created");
+    }
+
+    @PreDestroy
+    public void close() {
+        logger.info("Closing KafkaService");
+        adminClient.close();
+        kafkaProducer.close();
+        kafkaConsumer.close();
     }
 
     public void setupTopic() {
@@ -34,7 +50,7 @@ public class KafkaService {
         if (topicExists(this.kafkaConfig.getTopicName())) {
             logger.info("Topic {} already exists", this.kafkaConfig.getTopicName());
             logger.info("Deleting topic {}", this.kafkaConfig.getTopicName());
-            this.kafkaConfig.adminClient().deleteTopics(Collections.singleton(this.kafkaConfig.getTopicName()));
+            adminClient.deleteTopics(Collections.singleton(this.kafkaConfig.getTopicName()));
             // Other approach to delete topic
             // would be to consume all messages from the topic
             try {
@@ -54,7 +70,7 @@ public class KafkaService {
 
     private boolean topicExists(String topicName) {
         try {
-            Set<String> topics = this.kafkaConfig.adminClient().listTopics().names().get();
+            Set<String> topics = adminClient.listTopics().names().get();
             return topics.contains(topicName);
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Error checking if topic exists", e);
@@ -64,18 +80,17 @@ public class KafkaService {
     private void createTopic( String topicName, int partitions, short replicationFactor) {
         NewTopic newTopic = new NewTopic(topicName, partitions, replicationFactor);
         try {
-            this.kafkaConfig.adminClient().createTopics(Collections.singleton(newTopic)).all().get();
+            adminClient.createTopics(Collections.singleton(newTopic)).all().get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Error creating topic: " + topicName, e);
         }
     }
 
-    public void sendMessage(String topicName, String key, Object value) {
+    public void sendMessage(String topicName, String key, Person value) {
         logger.info("sendMessage");
 
-        KafkaProducer kafkaProducer = new KafkaProducer(this.kafkaConfig.producerConfigs());
 
-        ProducerRecord<String, Object> record = new ProducerRecord<>(topicName,key, value);
+        ProducerRecord<String, Person> record = new ProducerRecord<String, Person>(topicName,key, value);
 
         kafkaProducer.send(record, (recordMetadata, e) -> {
             // executes every time a record is successfully sent or an exception is thrown
@@ -99,8 +114,6 @@ public class KafkaService {
         }
 
         kafkaProducer.flush();
-        kafkaProducer.close();
-        // Send the message to the Kafka topic
     }
 
     public Optional<List<Person>> consumeMessages(String topicName, int offset, int numMessages) {
@@ -109,9 +122,10 @@ public class KafkaService {
             logger.error("Topic {} does not exist", topicName);
             return Optional.empty();
         }
+        logger.info("Topic {} exists", topicName);
 
         // Consume messages from the Kafka topic
-        try (KafkaConsumer kafkaConsumer = new KafkaConsumer(this.kafkaConfig.consumerConfigs())) {
+        try {
 
             // Get all partitions
             List<TopicPartition> partitions = new ArrayList<>();
@@ -134,7 +148,7 @@ public class KafkaService {
             }
             logger.info("Consuming messages from topic: %s" ,topicName);
 
-            Integer collectedRecords = 0;
+            int collectedRecords = 0;
             List<Person> messages = new ArrayList<>();
 
             // Use this instead ?https://learn.conduktor.io/kafka/java-consumer-seek-and-assign/

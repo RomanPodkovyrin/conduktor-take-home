@@ -15,7 +15,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/topic")
 public class KafkaConsumerController {
-    // TODO: how to handle default values in the controller?
     @Value("${api.default.offset}")
     private String defaultOffset;
 
@@ -37,23 +36,27 @@ public class KafkaConsumerController {
             @PathVariable String topicName,
             @PathVariable int offset,
             @RequestParam(defaultValue = "10") int count) {
-        //todo: handle incorrect topic or non existent one
-        logger.info("getMessages: {}", topicName);
+//TODO: test missing count, also how to set default from config
+        // TODO: what if count is zero?
 
-        // TODO: Set offset to defaultOffset if offset is not provided
+        return getResponseFromKafka(topicName, offset, count);
+    }
+
+    @GetMapping("/{topicName}")
+    public ResponseEntity<List<Person>> getMessages(
+            @PathVariable String topicName,
+            @RequestParam(defaultValue = "10") int count) {
+        return getResponseFromKafka(topicName, Integer.parseInt(defaultOffset), count);
+    }
+
+    private ResponseEntity<List<Person>> getResponseFromKafka(String topicName, int offset, int count) {
         Optional<List<Person>> messages = this.kafkaService.consumeMessages(topicName, offset, count);
-
-        logger.info("Received request to get {} messages from topic {} at offset {}",
-                count, topicName, offset);
 
         if (messages.isEmpty()) {
             return ResponseEntity.status(404).build();
         }
-        //TODO: Use optional to handle null messages
 
         return messages.get().isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(messages.get());
     }
-
-    // TODO: add endpoint for Get /topic/{topicName}?count=n as it says to have default for offset
 
 }
