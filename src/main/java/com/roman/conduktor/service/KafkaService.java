@@ -122,7 +122,6 @@ public class KafkaService {
             logger.error("Topic {} does not exist", topicName);
             return Optional.empty();
         }
-        logger.info("Topic {} exists", topicName);
 
         // Consume messages from the Kafka topic
         try {
@@ -159,7 +158,7 @@ public class KafkaService {
                     break;
                 }
                 for (ConsumerRecord<String, Person> record : records) {
-                    System.out.printf("Received message: Key=%s, Value=%s, Partition=%d, Offset=%d%n",
+                    logger.info("Received message: Key={}, Value={}, Partition={}, Offset={}",
                             record.key(), record.value(), record.partition(), record.offset());
                     messages.add(record.value());
                     collectedRecords++;

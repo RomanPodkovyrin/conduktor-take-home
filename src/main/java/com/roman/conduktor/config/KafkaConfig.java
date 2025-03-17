@@ -5,7 +5,6 @@ import com.roman.conduktor.model.serializer.PersonSerializer;
 import lombok.Getter;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -14,10 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.Collections;
 import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 @Getter
 @Configuration
@@ -35,8 +31,6 @@ public class KafkaConfig {
 
     @Value("${kafka.topic.replication.factor}")
     private short replicationFactor;
-
-// TODO: move config creation into constructor ? otherwise they all get called on startup
 
     @Bean
     public AdminClient adminClient() {
