@@ -27,6 +27,13 @@ public class KafkaService {
     private final AdminClient adminClient;
     private final KafkaProducer<String, Person> kafkaProducer;
     private final KafkaConsumer<String, Person> kafkaConsumer;
+    private final String producerMessage = """
+                        Received new metadata.
+                        Topic:{}
+                        Partition:{}
+                        Offset:{}
+                        Timestamp: {}""";
+
 
     @Autowired
     public KafkaService(KafkaConfig kafkaConfig, AdminClient adminClient, KafkaProducer<String, Person> kafkaProducer, KafkaConsumer<String, Person> kafkaConsumer) {
@@ -96,11 +103,7 @@ public class KafkaService {
             // executes every time a record is successfully sent or an exception is thrown
             if (e == null) {
                 // the record was successfully sent
-                logger.info("Received new metadata. \n" +
-                        "Topic:" + recordMetadata.topic() + "\n" +
-                        "Partition: " + recordMetadata.partition() + "\n" +
-                        "Offset: " + recordMetadata.offset() + "\n" +
-                        "Timestamp: " + recordMetadata.timestamp());
+                logger.info(producerMessage, recordMetadata.topic(), recordMetadata.partition(), recordMetadata.offset(), recordMetadata.timestamp());
             } else {
                 logger.error("Error while producing", e);
             }
@@ -110,7 +113,7 @@ public class KafkaService {
             // Sleep to avoid kafka sticky partition assignment
             Thread.sleep(1);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.error("Error while sleeping", e);
         }
 
         kafkaProducer.flush();
@@ -133,28 +136,30 @@ public class KafkaService {
             }
 
             kafkaConsumer.assign(partitions);
-//            partitions.forEach(partition -> kafkaConsumer.seek(partition, offset));
 
+
+            // Get the end offsets for each partition and seek to the requested offset
             Map<TopicPartition, Long> endOffsets = kafkaConsumer.endOffsets(partitions);
             for (TopicPartition partition : partitions) {
                 logger.info("Seeking partition {} offset {}", partition, endOffsets.get(partition));
                 if (offset >= endOffsets.get(partition)) {
-                    logger.error("Offset {} is out of bounds for partition {}, max partition is {}", offset, partition.partition(), endOffsets.get(partition));
+                    logger.error("Offset {} is out of bounds for partition {}, max partition offset {} is used instead", offset, partition.partition(), endOffsets.get(partition));
                     kafkaConsumer.seek(partition, endOffsets.get(partition));
                 } else {
                     kafkaConsumer.seek(partition, offset);
                 }
             }
-            logger.info("Consuming messages from topic: %s" ,topicName);
+            logger.info("Consuming messages from topic: {}" ,topicName);
 
+
+            // Consume messages until the requested number of messages is collected
             int collectedRecords = 0;
             List<Person> messages = new ArrayList<>();
 
-            // Use this instead ?https://learn.conduktor.io/kafka/java-consumer-seek-and-assign/
             while (collectedRecords < numMessages) {
                 ConsumerRecords<String, Person> records = kafkaConsumer.poll(Duration.ofMillis(100));
                 if (records.isEmpty()) {
-                    logger.error("Number of records requested {} is out of bounds", numMessages);
+                    logger.error("Number of records requested {} is out of bounds. Only collected {}", numMessages, collectedRecords);
                     break;
                 }
                 for (ConsumerRecord<String, Person> record : records) {
@@ -170,7 +175,7 @@ public class KafkaService {
 
             return Optional.of(messages);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error consuming messages", e);
 
         }
 

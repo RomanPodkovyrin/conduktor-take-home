@@ -34,7 +34,7 @@ class KafkaConsumerControllerTest {
         Person person = new Person("1", "John Doe");
 
         List<Person> persons = Collections.singletonList(person);
-        // Setup your mock service
+        // Set up your mock service
         when(kafkaService.consumeMessages(topicName, offset, count)).thenReturn(Optional.of(persons));
 
         ObjectMapper objectMapper = new ObjectMapper();
@@ -50,7 +50,7 @@ class KafkaConsumerControllerTest {
 // TODO test edge cases
 
     // - offset or count out of bound?
-    // non existing topic
+    // non-existing topic
     // no connection to kafka
 
 }

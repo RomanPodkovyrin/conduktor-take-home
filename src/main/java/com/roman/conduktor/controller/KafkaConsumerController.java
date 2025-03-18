@@ -35,19 +35,19 @@ public class KafkaConsumerController {
     public ResponseEntity<List<Person>> getMessages(
             @PathVariable String topicName,
             @PathVariable int offset,
-            @RequestParam(defaultValue = "10") int count) {
+            @RequestParam(required = false) Integer count ){
         logger.info("GET /topic/{}/{}?count={}", topicName, offset, count);
-//TODO: test missing count, also how to set default from config
 
-        return getResponseFromKafka(topicName, offset, count);
+
+        return getResponseFromKafka(topicName, offset, (count != null) ? count: Integer.parseInt(defaultCount));
     }
 
     @GetMapping("/{topicName}")
     public ResponseEntity<List<Person>> getMessages(
             @PathVariable String topicName,
-            @RequestParam(defaultValue = "10") int count) {
+            @RequestParam(required = false) Integer count) {
         logger.info("GET /topic/{}?count={}", topicName, count);
-        return getResponseFromKafka(topicName, Integer.parseInt(defaultOffset), count);
+        return getResponseFromKafka(topicName, Integer.parseInt(defaultOffset), (count != null) ? count: Integer.parseInt(defaultCount));
     }
 
     private ResponseEntity<List<Person>> getResponseFromKafka(String topicName, int offset, int count) {
@@ -57,7 +57,7 @@ public class KafkaConsumerController {
             return ResponseEntity.status(404).build();
         }
 
-        return messages.get().isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(messages.get());
+        return ResponseEntity.ok(messages.get());
     }
 
 }

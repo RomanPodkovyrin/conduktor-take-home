@@ -43,7 +43,6 @@ public class DataLoader {
 
             for (Person person : people) {
                 kafkaService.sendMessage(topicName, person.getId(), person);
-                // TODO: set correct log level for those messages
                 logger.info("Sent person with ID: {} to Kafka", person.getId());
             }
 

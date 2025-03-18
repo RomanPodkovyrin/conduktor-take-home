@@ -7,6 +7,7 @@ import com.roman.conduktor.model.Person;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.ResponseEntity;
@@ -21,13 +22,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 @EmbeddedKafka(partitions = 3, topics = {"people-topic"}, brokerProperties = { "listeners=PLAINTEXT://localhost:9092", "port=9092" })
 class IntegrationTest {
 
+    @Value(("${api.default.count}"))
+    private String defaultCount;
+
     @Autowired
     private TestRestTemplate restTemplate;
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setup() throws JsonProcessingException {
@@ -86,15 +90,9 @@ class IntegrationTest {
         assertThat(response.getBody()).isNullOrEmpty();
     }
 
-    @Test
-    void testGetMessagesWithOffsetOutOfBound() {
-        ResponseEntity<String> response = restTemplate.getForEntity("/topic/people-topic/1000?count=1", String.class);
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(response.getBody()).isNullOrEmpty();
-    }
 
-
-//    TODO: test isn't clearning kafka, and keeps messages in there
+    //    TODO: test isn't clearning kafka, and keeps messages in there
+    // Need to clear kafka after each test
 //    @Test
 //    void testGetMessagesWithCountOutOfBound() throws JsonProcessingException {
 //        ResponseEntity<String> response = restTemplate.getForEntity("/topic/people-topic/0?count=1000", String.class);
@@ -105,12 +103,33 @@ class IntegrationTest {
 //    }
 
     @Test
-    void testGetMessagesWithoutCount() throws JsonProcessingException {
+    void testGetMessagesWithOffsetOutOfBound() throws JsonProcessingException {
+        ResponseEntity<String> response = restTemplate.getForEntity("/topic/people-topic/1000?count=1", String.class);
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        List<Person> people = objectMapper.readValue(response.getBody() , new TypeReference<>() {
+        });
+        assertThat(people).isEmpty();
+    }
+
+
+
+
+    @Test
+    void testDefaultGetMessagesWithoutCount() throws JsonProcessingException {
         ResponseEntity<String> response = restTemplate.getForEntity("/topic/people-topic/0", String.class);
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         List<Person> people = objectMapper.readValue(response.getBody() , new TypeReference<>() {
         });
-        assertThat(people).hasSize(10);
+        assertThat(people).hasSize(Integer.parseInt(defaultCount));
+    }
+
+    @Test
+    void testDefaultGetMessagesWithoutCountAndOffset() throws JsonProcessingException {
+        ResponseEntity<String> response = restTemplate.getForEntity("/topic/people-topic", String.class);
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        List<Person> people = objectMapper.readValue(response.getBody() , new TypeReference<>() {
+        });
+        assertThat(people).hasSize(Integer.parseInt(defaultCount));
     }
 
 }
