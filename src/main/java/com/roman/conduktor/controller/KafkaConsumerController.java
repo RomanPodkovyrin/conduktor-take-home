@@ -36,8 +36,8 @@ public class KafkaConsumerController {
             @PathVariable String topicName,
             @PathVariable int offset,
             @RequestParam(defaultValue = "10") int count) {
+        logger.info("GET /topic/{}/{}?count={}", topicName, offset, count);
 //TODO: test missing count, also how to set default from config
-        // TODO: what if count is zero?
 
         return getResponseFromKafka(topicName, offset, count);
     }
@@ -46,6 +46,7 @@ public class KafkaConsumerController {
     public ResponseEntity<List<Person>> getMessages(
             @PathVariable String topicName,
             @RequestParam(defaultValue = "10") int count) {
+        logger.info("GET /topic/{}?count={}", topicName, count);
         return getResponseFromKafka(topicName, Integer.parseInt(defaultOffset), count);
     }
 
