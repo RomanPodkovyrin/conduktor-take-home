@@ -1,6 +1,40 @@
 # Conduktor Technical Assignment
 
-## Setup
+## Running the Application
+
+### Start the Application
+
+#### Build the Application
+```bash
+mvn clean package
+```
+
+#### Start the Application
+
+from jar
+
+```bash
+java -jar target/conduktor-0.0.1-SNAPSHOT.jar
+# or with loading data from file
+java -jar target/conduktor-0.0.1-SNAPSHOT.jar load-data
+```
+ 
+Start directly from mvn
+```bash
+mvn spring-boot:run
+```
+
+### Test the Application
+
+```bash
+mvn test
+```
+
+## Assumptions
+
+1. Rather than adding a separate app for data loading, I have added an argument to the application to load the data from the file. As it makes it easier to test it all together. And one less thing to run.
+2. As offset is part of the api request url, I can't give it a default value. So i have added a different endpoint where offset can be left empty.
+3. Postcode is misspelled in the data file. I have corrected it in the code.
 
 ### Start Kafka
 
