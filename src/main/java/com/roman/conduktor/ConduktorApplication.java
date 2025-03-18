@@ -12,7 +12,7 @@ public class ConduktorApplication {
     public static void main(String[] args) {
         ApplicationContext context = SpringApplication.run(ConduktorApplication.class, args);
 
-        // Note for Reviewer: This is a simple way to load data to Kafka
+        // TODO: Note for Reviewer: This is a simple way to load data to Kafka
         // It is not a production-ready solution
         // In a real-world scenario, I would use a separate service to load data to Kafka
         // Or would make an endpoint to trigger the data loading

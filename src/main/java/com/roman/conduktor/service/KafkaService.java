@@ -120,6 +120,7 @@ public class KafkaService {
     }
 
     public Optional<List<Person>> consumeMessages(String topicName, int offset, int numMessages) {
+        // TODO: Could do with extracting the consumer logic into a separate methods
         logger.info("Trying to consume messages from topic: {}", topicName);
         if (!topicExists( topicName)) {
             logger.error("Topic {} does not exist", topicName);

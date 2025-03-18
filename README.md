@@ -33,8 +33,12 @@ mvn test
 ## Assumptions
 
 1. Rather than adding a separate app for data loading, I have added an argument to the application to load the data from the file. As it makes it easier to test it all together. And one less thing to run.
-2. As offset is part of the api request url, I can't give it a default value. So i have added a different endpoint where offset can be left empty.
+2. As offset is part of the api request url, I can't give it a default value. So I have added a different endpoint where offset can be left empty.
 3. Postcode is misspelled in the data file. I have corrected it in the code.
+
+## Future Improvements
+
+Please look for the TODOs in the code for future improvements.
 
 ### Start Kafka
 
