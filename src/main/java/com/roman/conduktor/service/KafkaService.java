@@ -29,11 +29,11 @@ public class KafkaService {
     private final KafkaConsumer<String, Person> kafkaConsumer;
 
     @Autowired
-    public KafkaService(KafkaConfig kafkaConfig, AdminClient adminClient) {
+    public KafkaService(KafkaConfig kafkaConfig, AdminClient adminClient, KafkaProducer<String, Person> kafkaProducer, KafkaConsumer<String, Person> kafkaConsumer) {
         this.adminClient = adminClient;
         this.kafkaConfig = kafkaConfig;
-        this.kafkaProducer = new KafkaProducer<>(this.kafkaConfig.producerConfigs());
-        this.kafkaConsumer = new KafkaConsumer<>(this.kafkaConfig.consumerConfigs());
+        this.kafkaProducer = kafkaProducer;
+        this.kafkaConsumer = kafkaConsumer;
         logger.info("KafkaService created");
     }
 
@@ -90,7 +90,7 @@ public class KafkaService {
         logger.info("sendMessage");
 
 
-        ProducerRecord<String, Person> record = new ProducerRecord<String, Person>(topicName,key, value);
+        ProducerRecord<String, Person> record = new ProducerRecord<>(topicName,key, value);
 
         kafkaProducer.send(record, (recordMetadata, e) -> {
             // executes every time a record is successfully sent or an exception is thrown
@@ -177,5 +177,4 @@ public class KafkaService {
 
         return Optional.empty();
     }
-
 }
